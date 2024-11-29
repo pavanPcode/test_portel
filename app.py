@@ -99,6 +99,7 @@ def insert_order_update(order_data):
 @app.route('/')
 def index():
     return 'service are up'
+
 # Define the route to receive webhooks
 @app.route('/porter/order_update', methods=['POST'])
 def order_update():
