@@ -11,7 +11,7 @@ db_config = {
     'password': 'p3r3nnial',  # Replace with your MySQL password
     'database': 'db_a50d85_payroll'  # Replace with your database name
 }
-
+#
 def insert_order_update(order_data):
     # Connect to MySQL
     conn = mysql.connector.connect(**db_config)
