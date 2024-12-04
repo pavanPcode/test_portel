@@ -105,15 +105,15 @@ def order_update():
         webhook_data = request.json
         # Check status and insert data based on status type
         if webhook_data['status'] == 'order_accepted':
-            insert_order_update(webhook_data)
+            insert_order_update(webhook_data,webhook_data['status'])
         elif webhook_data['status'] == 'order_start_trip':
-            insert_order_update(webhook_data)
+            insert_order_update(webhook_data,webhook_data['status'])
         elif webhook_data['status'] == 'order_end_job':
-            insert_order_update(webhook_data)
+            insert_order_update(webhook_data,webhook_data['status'])
         elif webhook_data['status'] == 'order_cancel':
-            insert_order_update(webhook_data)
+            insert_order_update(webhook_data,webhook_data['status'])
         elif webhook_data['status'] == 'order_reopen':
-            insert_order_update(webhook_data)
+            insert_order_update(webhook_data,webhook_data['status'])
 
         # Respond with a success message
         return 'Webhook received and saved to database', 200

@@ -10,7 +10,7 @@ def store_order_details(order_data):
     insert_query = """
     INSERT INTO Porter_CreatedOrders (request_id, order_id, estimated_pickup_time, currency, minor_amount, tracking_url)
     VALUES ('{0}', '{1}', '{2}', '{3}', '{4}', '{5}');
-    INSERT INTO Porter_CreatedOrders (request_id, status)
+    INSERT INTO Porter_OrderLog (order_id, order_type)
     VALUES ('{1}', 'Created')
     """.format(order_data.get('request_id'),order_data.get('order_id'),order_data.get('estimated_pickup_time'),
                order_data['estimated_fare_details']['currency'],order_data['estimated_fare_details']['minor_amount'],
@@ -64,8 +64,7 @@ def fetch_record(query):
         if db:
             db.close()
 
-
-def insert_order_update(order_data):
+def insert_order_update(order_data,order_type):
     # Connect to MySQL
     conn = mysql.connector.connect(**db_config)
     cursor = conn.cursor()
@@ -74,7 +73,9 @@ def insert_order_update(order_data):
     query = """
     INSERT INTO Porter_order_updates 
     (order_id, status, event_ts, lat, `long`, driver_name, vehicle_number, mobile, estimated_trip_fare, actual_trip_fare, reopen_event_ts)
-    VALUES ('{order_id}', '{status}', {event_ts}, {lat}, {long}, '{driver_name}', '{vehicle_number}', '{mobile}', {estimated_trip_fare}, {actual_trip_fare}, {reopen_event_ts})
+    VALUES ('{order_id}', '{status}', {event_ts}, {lat}, {long}, '{driver_name}', '{vehicle_number}', '{mobile}', {estimated_trip_fare}, {actual_trip_fare}, {reopen_event_ts});
+    INSERT INTO Porter_OrderLog (order_id, status)
+    VALUES ('{order_id}', '{order_type}')
     """.format(
         order_id=order_data['orderId'],
         status=order_data['status'],
@@ -86,7 +87,8 @@ def insert_order_update(order_data):
         mobile=order_data['orderDetails'].get('driverDetails', {}).get('mobile', 'NULL'),
         estimated_trip_fare=order_data['orderDetails'].get('estimatedTripFare', 'NULL'),
         actual_trip_fare=order_data['orderDetails'].get('actualTripFare', 'NULL'),
-        reopen_event_ts=order_data['orderDetails'].get('eventTs', 'NULL')
+        reopen_event_ts=order_data['orderDetails'].get('eventTs', 'NULL'),
+        order_type = order_type
     )
     print(query)
     # Execute the query
