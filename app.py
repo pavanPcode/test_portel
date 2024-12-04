@@ -1,104 +1,101 @@
-import mysql.connector
 from flask import Flask, request
+from dbconn import insert_order_update,fetch_record,store_order_details
+import requests
 
 # Flask application setup
 app = Flask(__name__)
 
-# MySQL connection setup
-db_config = {
-    'host': 'MYSQL5048.site4now.net',
-    'user': 'a50d85_payroll',  # Replace with your MySQL username
-    'password': 'p3r3nnial',  # Replace with your MySQL password
-    'database': 'db_a50d85_payroll'  # Replace with your database name
-}
-#
-def insert_order_update(order_data):
-    # Connect to MySQL
-    conn = mysql.connector.connect(**db_config)
-    cursor = conn.cursor()
-
-    # Prepare SQL query using .format() for string formatting
-    query = """
-    INSERT INTO Porter_order_updates 
-    (order_id, status, event_ts, lat, `long`, driver_name, vehicle_number, mobile, estimated_trip_fare, actual_trip_fare, reopen_event_ts)
-    VALUES ('{order_id}', '{status}', {event_ts}, {lat}, {long}, '{driver_name}', '{vehicle_number}', '{mobile}', {estimated_trip_fare}, {actual_trip_fare}, {reopen_event_ts})
-    """.format(
-        order_id=order_data['orderId'],
-        status=order_data['status'],
-        event_ts=order_data['orderDetails'].get('eventTs', 'NULL'),
-        lat=order_data['orderDetails'].get('partnerLocation', {}).get('lat', 'NULL'),
-        long=order_data['orderDetails'].get('partnerLocation', {}).get('long', 'NULL'),
-        driver_name=order_data['orderDetails'].get('driverDetails', {}).get('driverName', 'NULL'),
-        vehicle_number=order_data['orderDetails'].get('driverDetails', {}).get('vehicleNumber', 'NULL'),
-        mobile=order_data['orderDetails'].get('driverDetails', {}).get('mobile', 'NULL'),
-        estimated_trip_fare=order_data['orderDetails'].get('estimatedTripFare', 'NULL'),
-        actual_trip_fare=order_data['orderDetails'].get('actualTripFare', 'NULL'),
-        reopen_event_ts=order_data['orderDetails'].get('eventTs', 'NULL')
-    )
-    print(query)
-    # Execute the query
-    cursor.execute(query)
-    conn.commit()
-
-    # Close the connection
-    cursor.close()
-    conn.close()
-
-# Function to insert order update into the database
-# def insert_order_update(order_data):
-#     # Connect to MySQL
-#     conn = mysql.connector.connect(**db_config)
-#     cursor = conn.cursor()
-#
-#     # Prepare SQL query
-#     query = """
-#     INSERT INTO Porter_order_updates
-#     (order_id, status, event_ts, lat, long, driver_name, vehicle_number, mobile, estimated_trip_fare, actual_trip_fare, reopen_event_ts)
-#     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-#     """
-#
-#     # Extract order details from the webhook payload
-#     order_id = order_data['orderId']
-#     status = order_data['status']
-#     event_ts = None
-#     lat = long = driver_name = vehicle_number = mobile = estimated_trip_fare = actual_trip_fare = reopen_event_ts = ''
-#
-#     if status == "order_accepted":
-#         event_ts = order_data['orderDetails']['eventTs']
-#         lat = order_data['orderDetails']['partnerLocation']['lat']
-#         long = order_data['orderDetails']['partnerLocation']['long']
-#         driver_name = order_data['orderDetails']['driverDetails']['driverName']
-#         vehicle_number = order_data['orderDetails']['driverDetails']['vehicleNumber']
-#         mobile = order_data['orderDetails']['driverDetails']['mobile']
-#
-#     elif status == "order_start_trip":
-#         lat = order_data['orderDetails']['partnerLocation']['lat']
-#         long = order_data['orderDetails']['partnerLocation']['long']
-#         estimated_trip_fare = order_data['orderDetails']['estimatedTripFare']
-#
-#     elif status == "order_end_job":
-#         event_ts = order_data['orderDetails']['eventTs']
-#         actual_trip_fare = order_data['orderDetails']['actualTripFare']
-#
-#     elif status == "order_cancel":
-#         event_ts = order_data['orderDetails']['eventTs']
-#
-#     elif status == "order_reopen":
-#         reopen_event_ts = order_data['orderDetails']['eventTs']
-#
-#     # Execute the query
-#     cursor.execute(query, (
-#     order_id, status, event_ts, lat, long, driver_name, vehicle_number, mobile, estimated_trip_fare, actual_trip_fare,
-#     reopen_event_ts))
-#     conn.commit()
-#
-#     # Close the connection
-#     cursor.close()
-#     conn.close()
-
 @app.route('/')
 def index():
     return 'service are up'
+
+@app.route('/porter/createorder', methods=['POST'])
+def createorder():
+    try:
+        data = request.json
+        query = F"SELECT * FROM Porter_delivery_Address WHERE request_id = '{data['request_id']}'"
+        result = fetch_record(query)
+        print(result)
+        if result['status']:
+            result= result['result']
+            # Map database fields to JSON structure
+            json_data = {
+                "request_id": result["request_id"],
+                "delivery_instructions": {
+                    "instructions_list": [
+                        {
+                            "type": "text",
+                            "description": result["instructions_text"]
+                        }
+                    ]
+                },
+                "pickup_details": {
+                    "address": {
+                        "apartment_address": result["pickup_apartment_address"],
+                        "street_address1": result["pickup_street_address1"],
+                        "street_address2": result["pickup_street_address2"],
+                        "landmark": result["pickup_landmark"],
+                        "city": result["pickup_city"],
+                        "state": result["pickup_state"],
+                        "pincode": result["pickup_pincode"],
+                        "country": result["pickup_country"],
+                        "lat": result["pickup_lat"],
+                        "lng": result["pickup_lng"],
+                        "contact_details": {
+                            "name": result["pickup_contact_name"],
+                            "phone_number": result["pickup_contact_phone"]
+                        }
+                    }
+                },
+                "drop_details": {
+                    "address": {
+                        "apartment_address": result["drop_apartment_address"],
+                        "street_address1": result["drop_street_address1"],
+                        "street_address2": result["drop_street_address2"],
+                        "landmark": result["drop_landmark"],
+                        "city": result["drop_city"],
+                        "state": result["drop_state"],
+                        "pincode": result["drop_pincode"],
+                        "country": result["drop_country"],
+                        "lat": result["drop_lat"],
+                        "lng": result["drop_lng"],
+                        "contact_details": {
+                            "name": result["drop_contact_name"],
+                            "phone_number": result["drop_contact_phone"]
+                        }
+                    }
+                },
+                "additional_comments": result["additional_comments"]
+            }
+
+            # API Endpoint and Headers
+            url = "https://pfe-apigw-uat.porter.in/v1/orders/create"
+            headers = {
+                "x-api-key": "8c18d7ac-38a8-4930-a020-149b0fdf45d5",
+                "Content-Type": "application/json"
+            }
+
+            # Make the API Request
+            try:
+                response = requests.post(url, json=json_data, headers=headers)
+                result = response.json()
+
+                if response.status_code == 201:
+                    print("Order Created Successfully!")
+                    print("Response:", result)
+                    store_order_details(result)
+                else:
+                    print(f"Error: {response.status_code}")
+                    print("Response:", result)
+            except Exception as e:
+                print(f"An error occurred: {e}")
+        return result
+
+    except Exception as e:
+        # If an error occurs, respond with an error message
+        print(f"Error: {e}")
+        return 'Failed to process webhook', 500
+
 
 # Define the route to receive webhooks
 @app.route('/porter/order_update', methods=['POST'])
@@ -106,7 +103,6 @@ def order_update():
     try:
         # Get the JSON data from the webhook
         webhook_data = request.json
-
         # Check status and insert data based on status type
         if webhook_data['status'] == 'order_accepted':
             insert_order_update(webhook_data)
@@ -126,6 +122,5 @@ def order_update():
         print(f"Error: {e}")
         return 'Failed to process webhook', 500
 
-#
 if __name__ == '__main__':
-    app.run()
+    app.run(debug=True)
