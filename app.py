@@ -1,5 +1,5 @@
-from flask import Flask, request
-from dbconn import insert_order_update,fetch_record,store_order_details
+from flask import Flask, request,jsonify
+from dbconn import insert_webhook_payload,fetch_record,store_order_details
 import requests
 
 # Flask application setup
@@ -8,6 +8,78 @@ app = Flask(__name__)
 @app.route('/')
 def index():
     return 'service are up'
+
+PFE_API_GW_URL = 'https://pfe-apigw-uat.porter.in/'
+API_KEY = '8c18d7ac-38a8-4930-a020-149b0fdf45d5'
+@app.route('/order/<order_id>/cancel', methods=['POST'])
+def cancel_order(order_id):
+    try:
+        # Construct the API URL
+        url = f"{PFE_API_GW_URL}v1/orders/{order_id}/cancel"
+
+        # Headers for the API call
+        headers = {
+            "x-api-key": API_KEY,
+            "Content-Type": "application/json"
+        }
+
+        # Pass the request body from the Flask client to the external API
+        payload = request.json if request.is_json else {}
+
+        # Make the POST request to cancel the order
+        response = requests.post(url, headers=headers, json=payload)
+
+        # Handle successful response
+        if response.status_code in [200, 204]:
+            return jsonify({
+                "message": "Order canceled successfully.",
+                "response": response.json() if response.content else {}
+            }), response.status_code
+        else:
+            # Handle API errors
+            return jsonify({
+                "error": "Failed to cancel the order.",
+                "status_code": response.status_code,
+                "details": response.text
+            }), response.status_code
+
+    except Exception as e:
+        # Handle exceptions
+        return jsonify({"error": "An error occurred while processing your request.", "details": str(e)}), 500
+
+@app.route('/order/<order_id>', methods=['GET'])
+def get_order(order_id):
+    try:
+        url = f'{PFE_API_GW_URL}v1/orders/'
+        # Construct the API URL
+        url = f"{url}{order_id}"
+
+        # Headers for the API call
+        headers = {
+            "x-api-key": f'{API_KEY}'
+        }
+
+        # Make the GET request
+        response = requests.get(url, headers=headers)
+
+        # Check for a successful response
+        if response.status_code == 200:
+            # Return the JSON response from the external API
+            return jsonify(response.json()), 200
+        else:
+            # Handle API errors
+            return jsonify({
+                "error": "Failed to fetch the order details.",
+                "status_code": response.status_code,
+                "details": response.text
+            }), response.status_code
+
+    except Exception as e:
+        # Handle exceptions
+        return jsonify({"error": "An error occurred while processing your request.", "details": str(e)}), 500
+
+
+
 
 @app.route('/porter/createorder', methods=['POST'])
 def createorder():
@@ -69,9 +141,9 @@ def createorder():
             }
 
             # API Endpoint and Headers
-            url = "https://pfe-apigw-uat.porter.in/v1/orders/create"
+            url = F"{PFE_API_GW_URL}v1/orders/create"
             headers = {
-                "x-api-key": "8c18d7ac-38a8-4930-a020-149b0fdf45d5",
+                "x-api-key": f"{API_KEY}",
                 "Content-Type": "application/json"
             }
 
@@ -84,6 +156,7 @@ def createorder():
                     print("Order Created Successfully!")
                     print("Response:", result)
                     store_order_details(result)
+                    return result
                 else:
                     print(f"Error: {response.status_code}")
                     print("Response:", result)
@@ -103,17 +176,19 @@ def order_update():
     try:
         # Get the JSON data from the webhook
         webhook_data = request.json
+        insert_webhook_payload(webhook_data)
+
         # Check status and insert data based on status type
-        if webhook_data['status'] == 'order_accepted':
-            insert_order_update(webhook_data,webhook_data['status'])
-        elif webhook_data['status'] == 'order_start_trip':
-            insert_order_update(webhook_data,webhook_data['status'])
-        elif webhook_data['status'] == 'order_end_job':
-            insert_order_update(webhook_data,webhook_data['status'])
-        elif webhook_data['status'] == 'order_cancel':
-            insert_order_update(webhook_data,webhook_data['status'])
-        elif webhook_data['status'] == 'order_reopen':
-            insert_order_update(webhook_data,webhook_data['status'])
+        # if webhook_data['status'] == 'order_accepted':
+        #     insert_order_update(webhook_data,webhook_data['status'])
+        # elif webhook_data['status'] == 'order_start_trip':
+        #     insert_order_update(webhook_data,webhook_data['status'])
+        # elif webhook_data['status'] == 'order_end_job':
+        #     insert_order_update(webhook_data,webhook_data['status'])
+        # elif webhook_data['status'] == 'order_cancel':
+        #     insert_order_update(webhook_data,webhook_data['status'])
+        # elif webhook_data['status'] == 'order_reopen':
+        #     insert_order_update(webhook_data,webhook_data['status'])
 
         # Respond with a success message
         return 'Webhook received and saved to database', 200
