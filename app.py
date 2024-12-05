@@ -198,4 +198,4 @@ def order_update():
         return 'Failed to process webhook', 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run()
