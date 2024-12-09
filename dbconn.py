@@ -9,6 +9,76 @@ db_config = {'host': 'MYSQL5048.site4now.net',
              'database': 'db_a50d85_payroll'  }
 
 
+def db_createorder(order_data,request_id):
+        try:
+            # Prepare the SQL query
+            insert_query = """
+            INSERT INTO Porter_delivery_Address (
+                request_id, instructions_text, 
+                pickup_apartment_address, pickup_street_address1, pickup_street_address2, pickup_landmark, 
+                pickup_city, pickup_state, pickup_pincode, pickup_country, pickup_lat, pickup_lng, 
+                pickup_contact_name, pickup_contact_phone, 
+                drop_apartment_address, drop_street_address1, drop_street_address2, drop_landmark, 
+                drop_city, drop_state, drop_pincode, drop_country, drop_lat, drop_lng, 
+                drop_contact_name, drop_contact_phone, additional_comments
+            ) VALUES (
+                '{0}', '{1}',
+                '{2}', '{3}', '{4}', '{5}', 
+                '{6}', '{7}', '{8}', '{9}', {10}, {11},
+                '{12}', '{13}', 
+                '{14}', '{15}', '{16}', '{17}',
+                '{18}', '{19}', '{20}', '{21}', {22}, {23},
+                '{24}', '{25}', '{26}'
+            );
+            """.format(
+                request_id,
+                order_data['delivery_instructions']['instructions_list'][0]['description'],
+                order_data['pickup_details']['address']['apartment_address'],
+                order_data['pickup_details']['address']['street_address1'],
+                order_data['pickup_details']['address']['street_address2'],
+                order_data['pickup_details']['address']['landmark'],
+                order_data['pickup_details']['address']['city'],
+                order_data['pickup_details']['address']['state'],
+                order_data['pickup_details']['address']['pincode'],
+                order_data['pickup_details']['address']['country'],
+                order_data['pickup_details']['address']['lat'],
+                order_data['pickup_details']['address']['lng'],
+                order_data['pickup_details']['address']['contact_details']['name'],
+                order_data['pickup_details']['address']['contact_details']['phone_number'],
+                order_data['drop_details']['address']['apartment_address'],
+                order_data['drop_details']['address']['street_address1'],
+                order_data['drop_details']['address']['street_address2'],
+                order_data['drop_details']['address']['landmark'],
+                order_data['drop_details']['address']['city'],
+                order_data['drop_details']['address']['state'],
+                order_data['drop_details']['address']['pincode'],
+                order_data['drop_details']['address']['country'],
+                order_data['drop_details']['address']['lat'],
+                order_data['drop_details']['address']['lng'],
+                order_data['drop_details']['address']['contact_details']['name'],
+                order_data['drop_details']['address']['contact_details']['phone_number'],
+                order_data['additional_comments']
+            )
+
+            # Connect to the database
+            db = mysql.connector.connect(**db_config)
+            cursor = db.cursor()
+
+            # Execute the query
+            cursor.execute(insert_query)
+            db.commit()
+
+            return {'status':True,"message": "Order details successfully inserted", "request_id": request_id}
+
+        except mysql.connector.Error as e:
+            return {"error": str(e),'status':False}
+        finally:
+            if cursor:
+                cursor.close()
+            if db:
+                db.close()
+
+
 def store_order_details(order_data):
     # SQL queries
     insert_query_orders = """

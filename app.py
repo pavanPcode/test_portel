@@ -1,9 +1,34 @@
 from flask import Flask, request,jsonify
-from dbconn import insert_webhook_payload,fetch_record,store_order_details
+from dbconn import insert_webhook_payload,fetch_record,store_order_details,db_createorder
 import requests
+import random
+import string
 
 # Flask application setup
 app = Flask(__name__)
+
+# Generate random request_id
+def generate_request_id():
+    return ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
+
+@app.route('/save_order_address', methods=['POST'])
+def save_order_address():
+    try:
+        # Get JSON data from the request
+        order_data = request.get_json()
+
+        # Generate a random request_id
+        request_id = generate_request_id()
+
+        data = db_createorder(order_data,request_id)
+        if data['status']:
+            return jsonify(data), 200
+        else:
+            return jsonify(data), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 
 @app.route('/')
 def index():
@@ -177,18 +202,6 @@ def order_update():
         # Get the JSON data from the webhook
         webhook_data = request.json
         insert_webhook_payload(webhook_data)
-
-        # Check status and insert data based on status type
-        # if webhook_data['status'] == 'order_accepted':
-        #     insert_order_update(webhook_data,webhook_data['status'])
-        # elif webhook_data['status'] == 'order_start_trip':
-        #     insert_order_update(webhook_data,webhook_data['status'])
-        # elif webhook_data['status'] == 'order_end_job':
-        #     insert_order_update(webhook_data,webhook_data['status'])
-        # elif webhook_data['status'] == 'order_cancel':
-        #     insert_order_update(webhook_data,webhook_data['status'])
-        # elif webhook_data['status'] == 'order_reopen':
-        #     insert_order_update(webhook_data,webhook_data['status'])
 
         # Respond with a success message
         return 'Webhook received and saved to database', 200
